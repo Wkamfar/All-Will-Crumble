@@ -12,6 +12,8 @@ public class ProceduralGlass : MonoBehaviour
     [SerializeField] float thickness;
     [SerializeField] List<Vector3> glassPoints = new List<Vector3>();
     [SerializeField] GameObject shardPrefab;
+
+    [SerializeField] GameObject cuttingTool;
     // Start is called before the first frame update
     void Start()
     {
@@ -28,27 +30,11 @@ public class ProceduralGlass : MonoBehaviour
             glassPoints.Insert(glassPoints.Count, new Vector3(glassPoints[i].x, glassPoints[i].y, thickness / 2));
         for (int i = 0; i < glassPoints.Count; ++i)
             points.Add(glassPoints[i]);
-
-        // creating a glass shard
-        List<Vector3> cuttingShape1 = new List<Vector3>();
-        cuttingShape1.Add(new Vector2(-6, 0));
-        cuttingShape1.Add(new Vector2(-6, 6));
-        cuttingShape1.Add(new Vector2(0, 6));
-        //cuttingShape1.Add(new Vector2(0, 0));
-        //cuttingShape1.Add(new Vector2(-3, 0));
-        //cuttingShape1.Add(new Vector2(-3, 6));
-        //cuttingShape1.Add(new Vector2(0, 6));
-        //cuttingShape1.Add(new Vector2(0, 0));
-        cuttingShapes.Add(cuttingShape1);
-        //List<Vector3> cuttingShape2 = new List<Vector3>();
-        //cuttingShape2.Add(new Vector2(-3, 0));
-        //cuttingShape2.Add(new Vector2(0, -3));
-        //cuttingShape2.Add(new Vector2(3, 0));
-        //cuttingShapes.Add(cuttingShape2);
-        //
         List<int> inside = new List<int>();
         List<bool> corner = new List<bool>();
         List<int> notIntersecting = new List<int>();
+
+        GenerateCuttingTool(cuttingTool);
         for (int i = 0; i < cuttingShapes.Count; ++i)
         {
             for (int j = 0; j < cuttingShapes[i].Count; ++j)
@@ -92,7 +78,7 @@ public class ProceduralGlass : MonoBehaviour
                     break;
                 }
             }
-            if (!hasCorner)
+            if (!hasCorner && inside[inside.Count - 1] == i)
                 corner.Add(false);
         }
         for (int i = 0; i < inside.Count; ++i)
@@ -119,22 +105,6 @@ public class ProceduralGlass : MonoBehaviour
                     if (uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1)
                     {
                         intersections.Add((intersect, j, k));
-                        if (intersecting) // make this an iterative process // reorder afterwards
-                        {
-                            if (intersections[0].Item3 > intersections[1].Item3 && (intersections[1].Item3 != 0 || intersections[0].Item3 != glassPoints.Count - 1) ||
-                            (intersections[0].Item3 == 0 && intersections[1].Item3 == glassPoints.Count - 1))
-                            {
-                                (Vector3, int, int) temp = (intersections[1].Item1, intersections[1].Item2, intersections[1].Item3);
-                                intersections[1] = intersections[0];
-                                intersections[0] = temp;
-                            }
-                            else if (intersections[0].Item3 == intersections[1].Item3 && Vector3.Distance(glassPoints[intersections[0].Item3], intersections[0].Item1) > Vector3.Distance(glassPoints[intersections[0].Item3], intersections[1].Item1))
-                            {
-                                (Vector3, int, int) temp = (intersections[1].Item1, intersections[1].Item2, intersections[1].Item3);
-                                intersections[1] = intersections[0];
-                                intersections[0] = temp;
-                            }
-                        } 
                         intersecting = true;
                     }
                 }
@@ -143,22 +113,105 @@ public class ProceduralGlass : MonoBehaviour
                 notIntersecting.Add(inside[i]);
             else
             {
-                if (corner[i]) // just check if corner
+                List<(List<int>, int)> wallIntersections = new List<(List<int>, int)>();
+                List<(Vector3, int, int)> newIntersections = new List<(Vector3, int, int)>();
+                for (int j = 0; j < intersections.Count; ++j) // make protection against more than 2 sides later // also make it cleaner // other idea = outer wall, so that it does not need to be split into smaller walls
                 {
-                    int glassIndex = 0;
-                    if (intersections[1].Item3 > intersections[0].Item3 && (intersections[0].Item3 != 0 || intersections[0].Item3 != glassPoints.Count - 1))
-                        glassIndex = intersections[1].Item3;
-                    shardPoints.Add(intersections[0].Item1);
-                    shardPoints.Add(glassPoints[glassIndex]);
-                    shardPoints.Add(intersections[1].Item1);
-                    int cutIter = cuttingShapes[inside[i]].Count - (intersections[1].Item2 > intersections[0].Item2 ? intersections[1].Item2 - intersections[0].Item2 : cuttingShapes[inside[i]].Count - intersections[0].Item2 + intersections[1].Item2);
-                    for (int j = 0; j < cutIter; ++j)
-                        shardPoints.Add(cuttingShapes[inside[i]][(intersections[0].Item2 - j) % cuttingShapes[inside[i]].Count]);
-                    
-                }
-                else if (intersections.Count > 2)
-                {
+                    if (wallIntersections.Count == 0)
+                        wallIntersections.Add((new List<int>() { j }, intersections[j].Item3));
+                    else
+                    {
+                        bool sameInter = false;
+                        for (int k = 0; k < wallIntersections.Count; ++k)
+                        {
+                            if (wallIntersections[k].Item2 == intersections[j].Item3)
+                            {
+                                wallIntersections[k].Item1.Add(j);
+                                sameInter = true;
+                                break;
+                            }
 
+                        }
+                        if (!sameInter)
+                            wallIntersections.Add((new List<int>() { j }, intersections[j].Item3));
+                    }
+                    if (wallIntersections.Count > 2)
+                        Debug.Log("The object will be sliced in half, rework this later"); 
+                }
+                //this only works for two 
+                for (int j = 0; j < wallIntersections.Count; ++j) // check if they aren't adjacent later
+                {
+                    int firstWall = wallIntersections[j].Item2;
+                    int index = j;
+                    for (int k = j + 1; k < wallIntersections.Count; ++k)
+                    {
+                        if ((firstWall > wallIntersections[k].Item2 && (wallIntersections[k].Item2 != 0 || firstWall != glassPoints.Count / 2 - 1)) || (firstWall == 0 && wallIntersections[k].Item2 == glassPoints.Count / 2 - 1))
+                        {
+                            firstWall = wallIntersections[k].Item2;
+                            index = k;
+                        }
+                    }
+                    (List<int>, int) temp = wallIntersections[j];
+                    wallIntersections[j] = wallIntersections[index];
+                    wallIntersections[index] = temp;
+                }
+                for (int j = 0; j < wallIntersections.Count; ++j)
+                {
+                    for (int k = 0; k < wallIntersections[j].Item1.Count; ++k)
+                    {
+                        int index = k;
+                        float minDist = Vector2.Distance(intersections[wallIntersections[j].Item1[k]].Item1, glassPoints[wallIntersections[j].Item2]);
+                        for (int m = k + 1; m < wallIntersections[j].Item1.Count; ++m)
+                        {
+                            float dist = Vector2.Distance(intersections[wallIntersections[j].Item1[m]].Item1, glassPoints[wallIntersections[j].Item2]);
+                            if (dist < minDist)
+                            {
+                                index = m;
+                                minDist = dist;
+                            }
+                        }
+                        int temp = wallIntersections[j].Item1[k];
+                        wallIntersections[j].Item1[k] = wallIntersections[j].Item1[index];
+                        wallIntersections[j].Item1[index] = temp;
+                    }
+                }
+                for (int j = 0; j < wallIntersections.Count; ++j)
+                    for (int k = 0; k < wallIntersections[j].Item1.Count; ++k)
+                        newIntersections.Add(intersections[wallIntersections[j].Item1[k]]);
+                //for (int j = 0; j < intersections.Count; ++j)
+                //    Debug.Log("Normal intersection " + j + " is: " + intersections[j]);
+                intersections = newIntersections;
+                if (wallIntersections.Count == 2)
+                {
+                    if (corner[i]) // just check if corner
+                    {
+                        int glassIndex = 0;
+                        if (intersections[1].Item3 > intersections[0].Item3 && (intersections[0].Item3 != 0 || intersections[0].Item3 != glassPoints.Count - 1))
+                            glassIndex = intersections[1].Item3;
+                        shardPoints.Add(intersections[0].Item1);
+                        shardPoints.Add(glassPoints[glassIndex]);
+                        shardPoints.Add(intersections[1].Item1);
+                        int cutIter = cuttingShapes[inside[i]].Count - (intersections[1].Item2 > intersections[0].Item2 ? intersections[1].Item2 - intersections[0].Item2 : cuttingShapes[inside[i]].Count - intersections[0].Item2 + intersections[1].Item2);
+                        for (int j = 0; j < cutIter; ++j)
+                        {
+                            int index = (intersections[1].Item2 + 1 + j) % cuttingShapes[inside[i]].Count;
+                            index = index < 0 ? cuttingShapes[inside[i]].Count - 1 : index;
+                            shardPoints.Add(cuttingShapes[inside[i]][index]);
+                        }  
+                    }
+                    else
+                    {
+                        for (int j = 0; j < intersections.Count; ++j)
+                            shardPoints.Add(intersections[j].Item1);
+                        int max = intersections.Count - 1;
+                        int cutIter = intersections[max].Item2 < intersections[0].Item2 ? intersections[0].Item2 - intersections[max].Item2  : cuttingShapes[inside[i]].Count + intersections[0].Item2 - intersections[max].Item2;
+                        for (int j = 0; j < cutIter; ++j)
+                            shardPoints.Add(cuttingShapes[inside[i]][(intersections[max].Item2 + 1 + j) % cuttingShapes[inside[i]].Count]);
+                    }
+                }
+                else if (wallIntersections.Count > 2)
+                {
+                    // this should not happen in this situation // rework later
                 }
                 else
                 {
@@ -302,8 +355,8 @@ public class ProceduralGlass : MonoBehaviour
             center = new Vector2(center.x + shardPoints[i].x, center.y + shardPoints[i].y);
         center /= shardPoints.Count;
         List<Vector3> points = new List<Vector3>();
-        for (int i = 0; i < shardPoints.Count; ++i)
-            Debug.Log("shardPoint " + i + " is: " + shardPoints[i]);
+        //for (int i = 0; i < shardPoints.Count; ++i)
+        //    Debug.Log("shardPoint " + i + " is: " + shardPoints[i]);
         for (int i = 0; i < shardPoints.Count; ++i)
             points.Add(new Vector3(shardPoints[i].x - center.x, shardPoints[i].y - center.y, -thickness / 2));
         for (int i = points.Count - 1; i >= 0; --i)
@@ -373,7 +426,7 @@ public class ProceduralGlass : MonoBehaviour
         }
         GameObject newShard = Instantiate(shardPrefab, transform, false);
         newShard.transform.localPosition = center;
-        newShard.transform.localScale = new Vector3(0.95f, 0.95f, 1);
+        newShard.transform.localScale = new Vector3(0.98f, 0.98f, 1);
         shards.Add(newShard);
         Mesh shardMesh = new Mesh();
         newShard.GetComponent<MeshFilter>().mesh = shardMesh;
@@ -409,6 +462,19 @@ public class ProceduralGlass : MonoBehaviour
         }
         return isWithinTriangle;
     }
+    private void GenerateCuttingTool(GameObject _cuttingTool)
+    {
+        cuttingShapes.Clear();
+        for (int i = 0; i < _cuttingTool.GetComponent<CuttingToolScript>().cuttingShapes.Count; ++i)
+        {
+            List<Vector3> cuttingShape = new List<Vector3>();
+            for (int j = 0; j < _cuttingTool.GetComponent<CuttingToolScript>().cuttingShapes[i].GetComponent<CuttingShapeScript>().cuttingPoints.Count; ++j)
+            {
+                cuttingShape.Add(_cuttingTool.GetComponent<CuttingToolScript>().cuttingShapes[i].GetComponent<CuttingShapeScript>().cuttingPoints[j].position);
+            }
+            cuttingShapes.Add(cuttingShape);
+        }
+    }
     private void OnDrawGizmos()
     {
         //Gizmos.color = Color.red;
@@ -433,3 +499,49 @@ public class ProceduralGlass : MonoBehaviour
 //    for (int j = 0; j<cutIter; ++j)
 //        shardPoints.Add(cuttingShapes[inside[i]][intersections[1].Item2 + 1 + j]);
 //}
+//test shards
+// creating a glass shard
+//List<Vector3> cuttingShape1 = new List<Vector3>();
+//List<Vector3> cuttingShape2 = new List<Vector3>();
+//List<Vector3> cuttingShape3 = new List<Vector3>();
+//List<Vector3> cuttingShape4 = new List<Vector3>();
+////cuttingShape1.Add(new Vector2(0, -6));
+////cuttingShape1.Add(new Vector2(-6, -6));
+////cuttingShape1.Add(new Vector2(-6, 0));
+////cuttingShapes.Add(cuttingShape1);
+
+////cuttingShape2.Add(new Vector2(-6, 0));
+////cuttingShape2.Add(new Vector2(-6, 6));
+////cuttingShape2.Add(new Vector2(0, 6));
+////cuttingShapes.Add(cuttingShape2);
+
+////cuttingShape3.Add(new Vector2(6, 0));
+////cuttingShape3.Add(new Vector2(0, 6));
+////cuttingShape3.Add(new Vector2(6, 6));
+////cuttingShapes.Add(cuttingShape3);
+
+////cuttingShape4.Add(new Vector2(6, 0));
+////cuttingShape4.Add(new Vector2(6, -6));
+////cuttingShape4.Add(new Vector2(0, -6));
+////cuttingShapes.Add(cuttingShape4);
+
+//cuttingShape1.Add(new Vector2(0, -6));
+//cuttingShape1.Add(new Vector2(-6, 0));
+//cuttingShape1.Add(new Vector2(0, 0));
+//cuttingShapes.Add(cuttingShape1);
+
+//cuttingShape2.Add(new Vector2(-6, 0));
+//cuttingShape2.Add(new Vector2(0, 6));
+//cuttingShape2.Add(new Vector2(0, 0));
+//cuttingShapes.Add(cuttingShape2);
+
+//cuttingShape3.Add(new Vector2(0, 6));
+//cuttingShape3.Add(new Vector2(6, 0));
+//cuttingShape3.Add(new Vector2(0, 0));
+//cuttingShapes.Add(cuttingShape3);
+
+//cuttingShape4.Add(new Vector2(6, 0));
+//cuttingShape4.Add(new Vector2(0, -6));
+//cuttingShape4.Add(new Vector2(0, 0));
+//cuttingShapes.Add(cuttingShape4);
+//

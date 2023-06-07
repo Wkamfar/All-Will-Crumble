@@ -429,7 +429,7 @@ public class ProceduralWallScript : MonoBehaviour
                 Vector2 next = wallVertices[(j + 1) % wallVertices.Count];
                 float x1 = wallVertices[j].x, y1 = wallVertices[j].y;
                 float x2 = next.x, y2 = next.y;
-                for (int k = 0; k < holeVertices.Count; ++k)
+                for (int k = 0; k < holeVertices.Count; ++k) // split mesh if intersecting points are not adjacent (rework this over the summer!!)
                 {
                     next = holeVertices[(k + 1) % holeVertices.Count];
                     float x3 = holeVertices[k].x, y3 = holeVertices[k].y;
