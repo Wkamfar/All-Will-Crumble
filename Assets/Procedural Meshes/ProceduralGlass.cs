@@ -78,7 +78,7 @@ public class ProceduralGlass : MonoBehaviour
                     break;
                 }
             }
-            if (!hasCorner && inside[inside.Count - 1] == i)
+            if (!hasCorner && inside.Count != 0 && inside[inside.Count - 1] == i)
                 corner.Add(false);
         }
         for (int i = 0; i < inside.Count; ++i)
@@ -294,57 +294,13 @@ public class ProceduralGlass : MonoBehaviour
         glassMesh.triangles = triangles.ToArray();
         glassMesh.RecalculateNormals();
 
+        //GetComponent<MeshRenderer>().enabled = false;
+
     }
 
     // Update is called once per frame
     void Update()
     {
-        //for (int x = 0; x < faces.Count; ++x)
-        //{
-        //    List<int> indices = faces[x];
-        //    int pointsCount = indices.Count;
-
-        //    for (int i = 0; i < pointsCount; ++i)
-        //    {
-        //        for (int j = 0; j < pointsCount - i; ++j)
-        //        {
-        //            Vector3 last = points[indices[(j - 1) < 0 ? indices.Count - 1 : (j - 1)]];
-        //            Vector3 vertex = points[indices[j]];
-        //            Vector3 next = points[indices[(j + 1) % indices.Count]];
-        //            // figure out a better angle solution                
-        //            if (IsTriangleOrientedClockwise(last, vertex, next)) // figure out if it is already reflex, so it does not need to be recalculated
-        //            {
-        //                bool isEar = true;
-        //                for (int k = 0; k < pointsCount - i; ++k)
-        //                {
-        //                    if (k == j || k == ((j - 1) < 0 ? indices.Count - 1 : (j - 1)) || k == (j + 1) % indices.Count)
-        //                        continue;
-        //                    if (IsPointInTriangle(last, vertex, next, points[indices[k]]))
-        //                    {
-        //                        isEar = false;
-        //                        break;
-        //                    }
-        //                }
-        //                if (isEar)
-        //                {
-        //                    triangles.Add(indices[(j - 1) < 0 ? indices.Count - 1 : (j - 1)]);
-        //                    triangles.Add(indices[j]);
-        //                    triangles.Add(indices[(j + 1) % indices.Count]);
-        //                    indices.RemoveAt(j);
-        //                    break;
-        //                }
-
-        //            }
-        //        }
-        //        if (indices.Count == 3)
-        //        {
-        //            triangles.Add(indices[0]);
-        //            triangles.Add(indices[1]);
-        //            triangles.Add(indices[2]);
-        //            break;
-        //        }
-        //    }
-        //}
     }
     GameObject CreateShard(List<Vector3> shardPoints)//create the shards first, then assign where they are placed // get the point relative location, do this all later
     {
