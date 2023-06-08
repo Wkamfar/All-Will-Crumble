@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class ProceduralGlass : MonoBehaviour
 {
+    // have glass Despawn later  // optimize later 
     Mesh glassMesh;
     [SerializeField] List<List<Vector3>> cuttingShapes = new List<List<Vector3>>();
     [SerializeField] List<GameObject> shards = new List<GameObject>();
@@ -17,9 +18,23 @@ public class ProceduralGlass : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        CreateGlass();
+        //BreakGlass();
+        // draw with depth
+
+        //GetComponent<MeshRenderer>().enabled = false;
+
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+
+    }
+    void CreateGlass()
+    {
         glassMesh = new Mesh();
         GetComponent<MeshFilter>().mesh = glassMesh;
-        GetComponent<MeshCollider>().sharedMesh = glassMesh;
         List<int> triangles = new List<int>();
         List<Vector3> points = new List<Vector3>();
         glassPoints.Add(new Vector3(-width / 2, -height / 2, -thickness / 2));
@@ -30,11 +45,81 @@ public class ProceduralGlass : MonoBehaviour
             glassPoints.Insert(glassPoints.Count, new Vector3(glassPoints[i].x, glassPoints[i].y, thickness / 2));
         for (int i = 0; i < glassPoints.Count; ++i)
             points.Add(glassPoints[i]);
+        List<int> indices = new List<int>();
+        for (int i = 0; i < points.Count / 2; ++i)
+            indices.Add(i);
+        int pointsCount = indices.Count;
+
+        for (int i = 0; i < pointsCount; ++i)
+        {
+            for (int j = 0; j < pointsCount - i; ++j)
+            {
+                Vector3 last = points[indices[(j - 1) < 0 ? indices.Count - 1 : (j - 1)]];
+                Vector3 vertex = points[indices[j]];
+                Vector3 next = points[indices[(j + 1) % indices.Count]];
+                // figure out a better angle solution                
+                if (IsTriangleOrientedClockwise(last, vertex, next)) // figure out if it is already reflex, so it does not need to be recalculated
+                {
+                    bool isEar = true;
+                    for (int k = 0; k < pointsCount - i; ++k)
+                    {
+                        if (k == j || k == ((j - 1) < 0 ? indices.Count - 1 : (j - 1)) || k == (j + 1) % indices.Count)
+                            continue;
+                        if (IsPointInTriangle(last, vertex, next, points[indices[k]]))
+                        {
+                            isEar = false;
+                            break;
+                        }
+                    }
+                    if (isEar)
+                    {
+                        triangles.Add(indices[(j - 1) < 0 ? indices.Count - 1 : (j - 1)]);
+                        triangles.Add(indices[j]);
+                        triangles.Add(indices[(j + 1) % indices.Count]);
+                        indices.RemoveAt(j);
+                        break;
+                    }
+
+                }
+            }
+            if (indices.Count == 3)
+            {
+                triangles.Add(indices[0]);
+                triangles.Add(indices[1]);
+                triangles.Add(indices[2]);
+                break;
+            }
+        }
+        int triCount = triangles.Count;
+        for (int i = 0; i < triCount; ++i)
+            triangles.Insert(triangles.Count, triangles[i] + points.Count / 2);
+        for (int i = 0; i < points.Count / 2; ++i)
+        {
+            List<int> face = new List<int>();
+            face.Add(i);
+            face.Add(points.Count - 1 - i);
+            face.Add(points.Count - 2 - i < points.Count / 2 ? points.Count - 1 : points.Count - 2 - i);
+            face.Add((i + 1) % (points.Count / 2));
+            triangles.Add(face[0]);
+            triangles.Add(face[1]);
+            triangles.Add(face[2]);
+            triangles.Add(face[2]);
+            triangles.Add(face[3]);
+            triangles.Add(face[0]);
+        }
+        glassMesh.Clear();
+        glassMesh.vertices = points.ToArray();
+        glassMesh.triangles = triangles.ToArray();
+        glassMesh.RecalculateNormals();
+        GetComponent<MeshCollider>().sharedMesh = glassMesh;
+    }
+    public void BreakGlass(Vector3 breakPoint)
+    {
         List<int> inside = new List<int>();
         List<bool> corner = new List<bool>();
         List<int> notIntersecting = new List<int>();
-
-        GenerateCuttingTool(cuttingTool);
+        Vector3 offset = CalculateOffset(breakPoint);
+        GenerateCuttingTool(cuttingTool, offset);
         for (int i = 0; i < cuttingShapes.Count; ++i)
         {
             for (int j = 0; j < cuttingShapes[i].Count; ++j)
@@ -48,7 +133,7 @@ public class ProceduralGlass : MonoBehaviour
                     float x2 = next.x, y2 = next.y;
                     if ((yp < y1) != (yp < y2) && xp < x1 + ((yp - y1) / (y2 - y1)) * (x2 - x1))
                         ++interCount;
-                    
+
                 }
                 if (interCount % 2 == 1)
                 {
@@ -136,7 +221,7 @@ public class ProceduralGlass : MonoBehaviour
                             wallIntersections.Add((new List<int>() { j }, intersections[j].Item3));
                     }
                     if (wallIntersections.Count > 2)
-                        Debug.Log("The object will be sliced in half, rework this later"); 
+                        Debug.Log("The object will be sliced in half, rework this later");
                 }
                 //this only works for two 
                 for (int j = 0; j < wallIntersections.Count; ++j) // check if they aren't adjacent later
@@ -197,14 +282,14 @@ public class ProceduralGlass : MonoBehaviour
                             int index = (intersections[1].Item2 + 1 + j) % cuttingShapes[inside[i]].Count;
                             index = index < 0 ? cuttingShapes[inside[i]].Count - 1 : index;
                             shardPoints.Add(cuttingShapes[inside[i]][index]);
-                        }  
+                        }
                     }
                     else
                     {
                         for (int j = 0; j < intersections.Count; ++j)
                             shardPoints.Add(intersections[j].Item1);
                         int max = intersections.Count - 1;
-                        int cutIter = intersections[max].Item2 < intersections[0].Item2 ? intersections[0].Item2 - intersections[max].Item2  : cuttingShapes[inside[i]].Count + intersections[0].Item2 - intersections[max].Item2;
+                        int cutIter = intersections[max].Item2 < intersections[0].Item2 ? intersections[0].Item2 - intersections[max].Item2 : cuttingShapes[inside[i]].Count + intersections[0].Item2 - intersections[max].Item2;
                         for (int j = 0; j < cutIter; ++j)
                             shardPoints.Add(cuttingShapes[inside[i]][(intersections[max].Item2 + 1 + j) % cuttingShapes[inside[i]].Count]);
                     }
@@ -222,85 +307,11 @@ public class ProceduralGlass : MonoBehaviour
                         shardPoints.Add(cuttingShapes[inside[i]][(intersections[1].Item2 + 1 + j) % cuttingShapes[inside[i]].Count]);
                 }
                 shards.Add(CreateShard(shardPoints));
-            }                
+            }
         }
         for (int i = 0; i < notIntersecting.Count; ++i)
             shards.Add(CreateShard(cuttingShapes[notIntersecting[i]]));
-        // draw with depth
-        List<int> indices = new List<int>();
-        for (int i = 0; i < points.Count / 2; ++i)
-            indices.Add(i);
-        int pointsCount = indices.Count;
-
-        for (int i = 0; i < pointsCount; ++i)
-        {
-            for (int j = 0; j < pointsCount - i; ++j)
-            {
-                Vector3 last = points[indices[(j - 1) < 0 ? indices.Count - 1 : (j - 1)]];
-                Vector3 vertex = points[indices[j]];
-                Vector3 next = points[indices[(j + 1) % indices.Count]];
-                // figure out a better angle solution                
-                if (IsTriangleOrientedClockwise(last, vertex, next)) // figure out if it is already reflex, so it does not need to be recalculated
-                {
-                    bool isEar = true;
-                    for (int k = 0; k < pointsCount - i; ++k)
-                    {
-                        if (k == j || k == ((j - 1) < 0 ? indices.Count - 1 : (j - 1)) || k == (j + 1) % indices.Count)
-                            continue;
-                        if (IsPointInTriangle(last, vertex, next, points[indices[k]]))
-                        {
-                            isEar = false;
-                            break;
-                        }
-                    }
-                    if (isEar)
-                    {
-                        triangles.Add(indices[(j - 1) < 0 ? indices.Count - 1 : (j - 1)]);
-                        triangles.Add(indices[j]);
-                        triangles.Add(indices[(j + 1) % indices.Count]);
-                        indices.RemoveAt(j);
-                        break;
-                    }
-
-                }
-            }
-            if (indices.Count == 3)
-            {
-                triangles.Add(indices[0]);
-                triangles.Add(indices[1]);
-                triangles.Add(indices[2]);
-                break;
-            }
-        }
-        int triCount = triangles.Count;
-        for (int i = 0; i < triCount; ++i)
-            triangles.Insert(triangles.Count, triangles[i] + points.Count / 2);
-        for (int i = 0; i < points.Count / 2; ++i)
-        {
-            List<int> face = new List<int>();
-            face.Add(i);
-            face.Add(points.Count - 1 - i);
-            face.Add(points.Count - 2 - i < points.Count /2 ? points.Count  - 1 : points.Count - 2 - i);
-            face.Add((i + 1) % (points.Count / 2));
-            triangles.Add(face[0]);
-            triangles.Add(face[1]);
-            triangles.Add(face[2]);
-            triangles.Add(face[2]);
-            triangles.Add(face[3]);
-            triangles.Add(face[0]);
-        }
-        glassMesh.Clear();
-        glassMesh.vertices = points.ToArray();
-        glassMesh.triangles = triangles.ToArray();
-        glassMesh.RecalculateNormals();
-
-        //GetComponent<MeshRenderer>().enabled = false;
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
+        Destroy(gameObject);
     }
     GameObject CreateShard(List<Vector3> shardPoints)//create the shards first, then assign where they are placed // get the point relative location, do this all later
     {
@@ -390,6 +401,7 @@ public class ProceduralGlass : MonoBehaviour
         shardMesh.vertices = points.ToArray();
         shardMesh.triangles = triangles.ToArray();
         shardMesh.RecalculateNormals();
+        newShard.transform.SetParent(null);
         return newShard;
     }
     bool IsTriangleOrientedClockwise(Vector2 p1, Vector2 p2, Vector2 p3)
@@ -418,7 +430,7 @@ public class ProceduralGlass : MonoBehaviour
         }
         return isWithinTriangle;
     }
-    private void GenerateCuttingTool(GameObject _cuttingTool)
+    private void GenerateCuttingTool(GameObject _cuttingTool, Vector3 offset)
     {
         cuttingShapes.Clear();
         for (int i = 0; i < _cuttingTool.GetComponent<CuttingToolScript>().cuttingShapes.Count; ++i)
@@ -426,10 +438,19 @@ public class ProceduralGlass : MonoBehaviour
             List<Vector3> cuttingShape = new List<Vector3>();
             for (int j = 0; j < _cuttingTool.GetComponent<CuttingToolScript>().cuttingShapes[i].GetComponent<CuttingShapeScript>().cuttingPoints.Count; ++j)
             {
-                cuttingShape.Add(_cuttingTool.GetComponent<CuttingToolScript>().cuttingShapes[i].GetComponent<CuttingShapeScript>().cuttingPoints[j].position);
+                cuttingShape.Add(_cuttingTool.GetComponent<CuttingToolScript>().cuttingShapes[i].GetComponent<CuttingShapeScript>().cuttingPoints[j].position + offset);
             }
             cuttingShapes.Add(cuttingShape);
         }
+    }
+    Vector3 CalculateOffset(Vector3 hitPoint)
+    {
+        Vector3 offset = new Vector3();
+        GameObject test = Instantiate(shardPrefab, transform);
+        test.transform.position = hitPoint;
+        offset = test.transform.localPosition;
+        Destroy(test);
+        return offset;
     }
     private void OnDrawGizmos()
     {
