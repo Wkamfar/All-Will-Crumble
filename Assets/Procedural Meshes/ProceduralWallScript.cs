@@ -305,109 +305,7 @@ public class ProceduralWallScript : MonoBehaviour
         wallVertices.Add(new Vector3(5, 5, 0));
         wallVertices.Add(new Vector3(5, -5, 0));
 
-        // This is so unoptimized, maybe chunk everything differently for better processing times
-        //Make a list of all the points and then make everything based on the/
-        //for (int i = 0; i < centers.Length; ++i) // add the wall stuff for when you are shooting the gun // rework destruction on a large scale
-        //{
-        //    List<Vector3> holeVertices = new List<Vector3>();
-        //    for (int j = 0; j < pointsOnCircle; ++j)
-        //    {
-        //        float angle = 360f / pointsOnCircle * (j + 1f / 2f) / 180 * Mathf.PI;
-        //        Vector3 point = new Vector3(centers[i].transform.position.x + radius * Mathf.Cos(angle), centers[i].transform.position.y + radius * Mathf.Sin(angle), 0);
-        //        holeVertices.Add(point);
-        //    }
-        //    bool isColliding = false; //I am being an idiot
-        //    bool isWallColliding = false;
-        //    List<Vector3> newWallVertices = new List<Vector3>();
-        //    List<(Vector3, int, int)> intersects = new List<(Vector3, int, int)>(); //int = hole segment, int = wall segment number
-        //    // optimize this later // you can just not iterate through the times that it is intersection // you don't need to check sides that have already been checked
-        //    //reverse the order of this holes then walls 
-        //    for (int j = 0; j < holeVertices.Count; ++j) 
-        //    {
-        //        Vector2 next = holeVertices[(j + 1) % holeVertices.Count];
-        //        float x1 = holeVertices[j].x, y1 = holeVertices[j].y;
-        //        float x2 = next.x, y2 = next.y;
-        //        List<(Vector3, int, int)> tempIntersects = new List<(Vector3, int, int)>();
-        //        for (int k = 0; k < wallVertices.Count; ++k)
-        //        {
-        //            next = wallVertices[(k + 1) % wallVertices.Count];
-        //            float x3 = wallVertices[k].x, y3 = wallVertices[k].y;
-        //            float x4 = next.x, y4 = next.y;
-        //            float uA = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1));
-        //            float uB = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1));
-
-        //            if (uA > 0 && uA < 1 && uB > 0 && uB < 1) // exclude rare cases (points are identical / deal with this later)
-        //            {
-        //                isColliding = true;
-        //                isWallColliding = true;
-        //                float intersectionX = x1 + (uA * (x2 - x1));
-        //                float intersectionY = y1 + (uA * (y2 - y1));
-        //                Vector2 intersect = new Vector2(intersectionX, intersectionY); // organize intersections
-        //                tempIntersects.Add((intersect, j, k));
-        //            }
-        //        }
-        //        if (tempIntersects.Count >= 2 &&
-        //            Vector3.Distance(holeVertices[j], tempIntersects[0].Item1) < Vector3.Distance(holeVertices[j], tempIntersects[tempIntersects.Count - 1].Item1))
-        //        {
-        //            tempIntersects.Reverse();
-        //            intersects.InsertRange(intersects.Count, tempIntersects);
-        //        } 
-        //        else
-        //            intersects.InsertRange(intersects.Count, tempIntersects);
-        //    }
-        //    if (!isColliding)
-        //    {
-
-        //        holes.Add(holeVertices); // this currently regenerates the object, make it so that it moves the points later // if it splits the object, make a new object // do this later
-        //    }
-        //    else if (isWallColliding)
-        //    {
-        //        if (intersects.Count == 1)
-        //        {
-
-        //        }
-        //        else
-        //        {
-
-        //            for (int j = 0; j < intersects.Count; j += 2)
-        //            {
-        //                // make something for 3 to 0 // make everything based off of item3, not 2
-        //                List<Vector3> segment = new List<Vector3>();
-        //                bool counterTurn = (intersects[j + 1].Item2 < intersects[j].Item2 ? holeVertices.Count - intersects[j].Item2 + intersects[j + 1].Item2 : intersects[j + 1].Item2 - intersects[j].Item2) > 
-        //                                   (intersects[j].Item2 < intersects[j + 1].Item2 ? holeVertices.Count - intersects[j + 1].Item2 + intersects[j].Item2 : intersects[j].Item2 - intersects[j + 1].Item2);
-        //                int holeIters = intersects[j].Item3 > intersects[j + 1].Item3 || counterTurn ? holeVertices.Count - intersects[j + 1].Item2 + intersects[j].Item2 : intersects[j + 1].Item2 - intersects[j].Item2;
-        //                int wallIters = intersects[j].Item3 > intersects[j + 1].Item3 || counterTurn ? intersects[j + 1].Item3 - intersects[j].Item3 : holeVertices.Count - intersects[j + 1].Item3 + intersects[j].Item3;
-        //                Debug.Log("holeIters is: " + holeIters);
-        //                Debug.Log("wallIters is: " + wallIters);
-        //                segment.Add(intersects[j].Item1);
-        //                //Debug.Log("itersection 1 is: " + intersects[j]);
-        //                //Debug.Log("itersection 2 is: " + intersects[j + 1]); // check if over after // lazy
-        //                if (intersects[j].Item3 > intersects[j + 1].Item3 || counterTurn ||
-        //                    (intersects[j].Item3 == intersects[j + 1].Item3 && Vector2.Distance(intersects[j].Item1, wallVertices[intersects[j].Item3]) > Vector2.Distance(intersects[j + 1].Item1, wallVertices[intersects[j].Item3])))
-        //                {
-        //                    for (int k = 0; k < wallIters; ++k)
-        //                        segment.Insert(segment.Count, wallVertices[(intersects[j].Item3 + k + 1) % wallVertices.Count]);
-        //                    segment.Insert(segment.Count, intersects[j + 1].Item1);
-        //                    for (int k = 0; k < holeIters; ++k)
-        //                        segment.Insert(segment.Count, holeVertices[(intersects[j + 1].Item2 + k + 1) % holeVertices.Count]);
-
-        //                }
-        //                else
-        //                {
-
-        //                    for (int k = 0; k < holeIters; ++k)
-        //                        segment.Insert(segment.Count, holeVertices[(intersects[j].Item2 + k + 1) % holeVertices.Count]);
-        //                    segment.Insert(segment.Count, intersects[j + 1].Item1);
-        //                    for (int k = 0; k < wallIters; ++k)
-        //                        segment.Insert(segment.Count, wallVertices[(intersects[j + 1].Item3 + k + 1) % wallVertices.Count]);
-        //                }
-        //                newWallVertices.InsertRange(newWallVertices.Count, segment);
-        //            }
-        //        }
-        //        wallVertices = newWallVertices;
-        //    }
-
-        //}
+        
         for (int i = 0; i < centers.Length; ++i) // add the wall stuff for when you are shooting the gun // rework destruction on a large scale
         {
             List<Vector3> holeVertices = new List<Vector3>();
@@ -421,7 +319,7 @@ public class ProceduralWallScript : MonoBehaviour
                 continue;
             bool isColliding = false;
             bool isCollidingWall = false;
-            List<(Vector2, int, int)> intersections = new List<(Vector2, int, int)>();//get the furthest points // 0 = point, 1 = start / end index shape 1 collision, 2 = start / end shape 2 collision
+            List<(Vector3, int, int)> intersections = new List<(Vector3, int, int)>();//get the furthest points // 0 = point, 1 = start / end index shape 1 collision, 2 = start / end shape 2 collision
             //List<(Vector2, int, int, int, int)> intersections = new List<(Vector2, int, int, int, int)>();// 0 = point, 1, 2 = start / end index shape 1 collision, 3, 4 = start / end shape 2 collision
             //only include the furthest points for now, we only need normal shapes
             for (int j = 0; j < wallVertices.Count; ++j) // optimize this later // you can just not iterate through the times that it is intersection // you don't need to check sides that have already been checked
@@ -444,27 +342,61 @@ public class ProceduralWallScript : MonoBehaviour
                         float intersectionX = x1 + (uA * (x2 - x1));
                         float intersectionY = y1 + (uA * (y2 - y1));
                         Vector2 intersect = new Vector2(intersectionX, intersectionY);
-                        if (intersections.Count == 0)
-                            intersections.Add((intersect, j, k));
-                        else if (intersections.Count == 1)
-                            intersections.Add((intersect, j, k));
-                        else if (Vector2.Distance(intersect, intersections[0].Item1) > Vector2.Distance(intersections[0].Item1, intersections[1].Item1) &&
-                                 Vector2.Distance(intersect, intersections[0].Item1) > Vector2.Distance(intersect, intersections[1].Item1))
-                            intersections[1] = (intersect, j, k);
-                        else if (Vector2.Distance(intersect, intersections[1].Item1) > Vector2.Distance(intersections[0].Item1, intersections[1].Item1))// Add this if necessary:  && Vector2.Distance(intersect, intersections[1].Item1) > Vector2.Distance(intersect, intersections[0].Item1)
-                            intersections[0] = (intersect, j, k);
+                        intersections.Add((intersect, j, k));
                     }
                 }
             }
             if (!isColliding)
                 holes.Add(holeVertices); // this currently regenerates the object, make it so that it moves the points later
-            else if (isColliding)
+            else if (isColliding) // rework the collisions
             {
                 if (isCollidingWall)
                 {
+                    List<(List<int>, int)> wallIntersections = new List<(List<int>, int)>();
+                    List<(Vector3, int, int)> newIntersections = new List<(Vector3, int, int)>();
+                    for (int j = 0; j < intersections.Count; ++j) // make protection against more than 2 sides later // also make it cleaner // other idea = outer wall, so that it does not need to be split into smaller walls
+                    {
+                        if (wallIntersections.Count == 0)
+                            wallIntersections.Add((new List<int>() { j }, intersections[j].Item3));
+                        else
+                        {
+                            bool sameInter = false;
+                            for (int k = 0; k < wallIntersections.Count; ++k)
+                            {
+                                if (wallIntersections[k].Item2 == intersections[j].Item3)
+                                {
+                                    wallIntersections[k].Item1.Add(j);
+                                    sameInter = true;
+                                    break;
+                                }
+
+                            }
+                            if (!sameInter)
+                                wallIntersections.Add((new List<int>() { j }, intersections[j].Item3));
+                        }
+                        if (wallIntersections.Count > 2)
+                            Debug.Log("The object will be sliced in half, rework this later");
+                    }
+                    //this only works for two 
+                    for (int j = 0; j < wallIntersections.Count; ++j) // check if they aren't adjacent later
+                    {
+                        int firstWall = wallIntersections[j].Item2;
+                        int index = j;
+                        for (int k = j + 1; k < wallIntersections.Count; ++k)
+                        {
+                            if ((firstWall > wallIntersections[k].Item2 && (wallIntersections[k].Item2 != 0 || firstWall != wallVertices.Count - 1)) || (firstWall == 0 && wallIntersections[k].Item2 == wallVertices.Count - 1))
+                            {
+                                firstWall = wallIntersections[k].Item2;
+                                index = k;
+                            }
+                        }
+                        (List<int>, int) temp = wallIntersections[j];
+                        wallIntersections[j] = wallIntersections[index];
+                        wallIntersections[index] = temp;
+                    }
                     if (intersections.Count == 1)
                     {
-                        //add this interaction later
+                    //add this interaction later
                     }
                     else if (intersections.Count == 2) //account for when intersections and points are the same + 1 intersection
                     {
@@ -494,7 +426,6 @@ public class ProceduralWallScript : MonoBehaviour
                         for (int j = 1; j < wallIters; ++j)
                         {
                             tempVertices.Add(wallVertices[(wall1Index + j) % wallVertices.Count]);
-                            Debug.Log("indices are: " + (wall1Index + j) % wallVertices.Count);
                         }
 
                         for (int j = 0; j < tempVertices.Count; ++j)
@@ -512,6 +443,8 @@ public class ProceduralWallScript : MonoBehaviour
                 }
             }
         }
+        // rework this, so it orders the points + just add the points to the wall
+        // account for the connections, skip them when drawing the wall
         for (int i = 0; i < wallVertices.Count; ++i)
             points.Add(wallVertices[i]);
         List<(Vector2, Vector2, int)> holeConnection = new List<(Vector2, Vector2, int)>(); // 1 = connectionPoint, 2 = leftMostPoint, 3 = hole index
@@ -626,4 +559,195 @@ public class ProceduralWallScript : MonoBehaviour
             Gizmos.DrawSphere(points[i], 0.1f);
     }
 }
+// This is so unoptimized, maybe chunk everything differently for better processing times
+//Make a list of all the points and then make everything based on the/
+//for (int i = 0; i < centers.Length; ++i) // add the wall stuff for when you are shooting the gun // rework destruction on a large scale
+//{
+//    List<Vector3> holeVertices = new List<Vector3>();
+//    for (int j = 0; j < pointsOnCircle; ++j)
+//    {
+//        float angle = 360f / pointsOnCircle * (j + 1f / 2f) / 180 * Mathf.PI;
+//        Vector3 point = new Vector3(centers[i].transform.position.x + radius * Mathf.Cos(angle), centers[i].transform.position.y + radius * Mathf.Sin(angle), 0);
+//        holeVertices.Add(point);
+//    }
+//    bool isColliding = false; //I am being an idiot
+//    bool isWallColliding = false;
+//    List<Vector3> newWallVertices = new List<Vector3>();
+//    List<(Vector3, int, int)> intersects = new List<(Vector3, int, int)>(); //int = hole segment, int = wall segment number
+//    // optimize this later // you can just not iterate through the times that it is intersection // you don't need to check sides that have already been checked
+//    //reverse the order of this holes then walls 
+//    for (int j = 0; j < holeVertices.Count; ++j) 
+//    {
+//        Vector2 next = holeVertices[(j + 1) % holeVertices.Count];
+//        float x1 = holeVertices[j].x, y1 = holeVertices[j].y;
+//        float x2 = next.x, y2 = next.y;
+//        List<(Vector3, int, int)> tempIntersects = new List<(Vector3, int, int)>();
+//        for (int k = 0; k < wallVertices.Count; ++k)
+//        {
+//            next = wallVertices[(k + 1) % wallVertices.Count];
+//            float x3 = wallVertices[k].x, y3 = wallVertices[k].y;
+//            float x4 = next.x, y4 = next.y;
+//            float uA = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1));
+//            float uB = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1));
 
+//            if (uA > 0 && uA < 1 && uB > 0 && uB < 1) // exclude rare cases (points are identical / deal with this later)
+//            {
+//                isColliding = true;
+//                isWallColliding = true;
+//                float intersectionX = x1 + (uA * (x2 - x1));
+//                float intersectionY = y1 + (uA * (y2 - y1));
+//                Vector2 intersect = new Vector2(intersectionX, intersectionY); // organize intersections
+//                tempIntersects.Add((intersect, j, k));
+//            }
+//        }
+//        if (tempIntersects.Count >= 2 &&
+//            Vector3.Distance(holeVertices[j], tempIntersects[0].Item1) < Vector3.Distance(holeVertices[j], tempIntersects[tempIntersects.Count - 1].Item1))
+//        {
+//            tempIntersects.Reverse();
+//            intersects.InsertRange(intersects.Count, tempIntersects);
+//        } 
+//        else
+//            intersects.InsertRange(intersects.Count, tempIntersects);
+//    }
+//    if (!isColliding)
+//    {
+
+//        holes.Add(holeVertices); // this currently regenerates the object, make it so that it moves the points later // if it splits the object, make a new object // do this later
+//    }
+//    else if (isWallColliding)
+//    {
+//        if (intersects.Count == 1)
+//        {
+
+//        }
+//        else
+//        {
+
+//            for (int j = 0; j < intersects.Count; j += 2)
+//            {
+//                // make something for 3 to 0 // make everything based off of item3, not 2
+//                List<Vector3> segment = new List<Vector3>();
+//                bool counterTurn = (intersects[j + 1].Item2 < intersects[j].Item2 ? holeVertices.Count - intersects[j].Item2 + intersects[j + 1].Item2 : intersects[j + 1].Item2 - intersects[j].Item2) > 
+//                                   (intersects[j].Item2 < intersects[j + 1].Item2 ? holeVertices.Count - intersects[j + 1].Item2 + intersects[j].Item2 : intersects[j].Item2 - intersects[j + 1].Item2);
+//                int holeIters = intersects[j].Item3 > intersects[j + 1].Item3 || counterTurn ? holeVertices.Count - intersects[j + 1].Item2 + intersects[j].Item2 : intersects[j + 1].Item2 - intersects[j].Item2;
+//                int wallIters = intersects[j].Item3 > intersects[j + 1].Item3 || counterTurn ? intersects[j + 1].Item3 - intersects[j].Item3 : holeVertices.Count - intersects[j + 1].Item3 + intersects[j].Item3;
+//                Debug.Log("holeIters is: " + holeIters);
+//                Debug.Log("wallIters is: " + wallIters);
+//                segment.Add(intersects[j].Item1);
+//                //Debug.Log("itersection 1 is: " + intersects[j]);
+//                //Debug.Log("itersection 2 is: " + intersects[j + 1]); // check if over after // lazy
+//                if (intersects[j].Item3 > intersects[j + 1].Item3 || counterTurn ||
+//                    (intersects[j].Item3 == intersects[j + 1].Item3 && Vector2.Distance(intersects[j].Item1, wallVertices[intersects[j].Item3]) > Vector2.Distance(intersects[j + 1].Item1, wallVertices[intersects[j].Item3])))
+//                {
+//                    for (int k = 0; k < wallIters; ++k)
+//                        segment.Insert(segment.Count, wallVertices[(intersects[j].Item3 + k + 1) % wallVertices.Count]);
+//                    segment.Insert(segment.Count, intersects[j + 1].Item1);
+//                    for (int k = 0; k < holeIters; ++k)
+//                        segment.Insert(segment.Count, holeVertices[(intersects[j + 1].Item2 + k + 1) % holeVertices.Count]);
+
+//                }
+//                else
+//                {
+
+//                    for (int k = 0; k < holeIters; ++k)
+//                        segment.Insert(segment.Count, holeVertices[(intersects[j].Item2 + k + 1) % holeVertices.Count]);
+//                    segment.Insert(segment.Count, intersects[j + 1].Item1);
+//                    for (int k = 0; k < wallIters; ++k)
+//                        segment.Insert(segment.Count, wallVertices[(intersects[j + 1].Item3 + k + 1) % wallVertices.Count]);
+//                }
+//                newWallVertices.InsertRange(newWallVertices.Count, segment);
+//            }
+//        }
+//        wallVertices = newWallVertices;
+//    }
+
+//}
+
+// Original intersection script
+//    for (int j = 0; j < wallVertices.Count; ++j) // optimize this later // you can just not iterate through the times that it is intersection // you don't need to check sides that have already been checked
+//    {
+//        Vector2 next = wallVertices[(j + 1) % wallVertices.Count];
+//        float x1 = wallVertices[j].x, y1 = wallVertices[j].y;
+//        float x2 = next.x, y2 = next.y;
+//        for (int k = 0; k < holeVertices.Count; ++k) // split mesh if intersecting points are not adjacent (rework this over the summer!!)
+//        {
+//            next = holeVertices[(k + 1) % holeVertices.Count];
+//            float x3 = holeVertices[k].x, y3 = holeVertices[k].y;
+//            float x4 = next.x, y4 = next.y;
+//            //just make a function for this // (I'm lazy)
+//            float uA = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1));
+//            float uB = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1));
+//            if (uA > 0 && uA < 1 && uB > 0 && uB < 1) // exclude rare cases (points are identical / deal with this later)
+//            {
+//                isColliding = true;
+//                isCollidingWall = true;
+//                float intersectionX = x1 + (uA * (x2 - x1));
+//                float intersectionY = y1 + (uA * (y2 - y1));
+//                Vector2 intersect = new Vector2(intersectionX, intersectionY);
+//                if (intersections.Count == 0)
+//                    intersections.Add((intersect, j, k));
+//                else if (intersections.Count == 1)
+//                    intersections.Add((intersect, j, k));
+//                else if (Vector2.Distance(intersect, intersections[0].Item1) > Vector2.Distance(intersections[0].Item1, intersections[1].Item1) &&
+//                         Vector2.Distance(intersect, intersections[0].Item1) > Vector2.Distance(intersect, intersections[1].Item1))
+//                    intersections[1] = (intersect, j, k);
+//                else if (Vector2.Distance(intersect, intersections[1].Item1) > Vector2.Distance(intersections[0].Item1, intersections[1].Item1))// Add this if necessary:  && Vector2.Distance(intersect, intersections[1].Item1) > Vector2.Distance(intersect, intersections[0].Item1)
+//                    intersections[0] = (intersect, j, k);
+//            }
+//        }
+//    }
+//    if (!isColliding)
+//        holes.Add(holeVertices); // this currently regenerates the object, make it so that it moves the points later
+//    else if (isColliding) // rework the collisions
+//    {
+//        if (isCollidingWall)
+//        {
+//            if (intersections.Count == 1)
+//            {
+//                //add this interaction later
+//            }
+//            else if (intersections.Count == 2) //account for when intersections and points are the same + 1 intersection
+//            {
+//                int hole1Index = intersections[0].Item3;
+//                int hole2Index = (intersections[1].Item3 + 1) % holeVertices.Count;
+//                int wall1Index = intersections[0].Item2;
+//                int wall2Index = (intersections[1].Item2 + 1) % wallVertices.Count;
+//                Vector2 inter1 = intersections[0].Item1;
+//                Vector2 inter2 = intersections[1].Item1;
+//                if ((intersections[1].Item2 < intersections[0].Item2) || (intersections[1].Item2 == wallVertices.Count - 1 && intersections[0].Item2 == 0) ||
+//                     Vector2.Distance(intersections[1].Item1, wallVertices[intersections[0].Item2]) < Vector2.Distance(intersections[0].Item1, wallVertices[intersections[0].Item2])
+//                     )
+//                {
+//                    hole1Index = intersections[1].Item3;
+//                    hole2Index = (intersections[0].Item3 + 1) % holeVertices.Count;
+//                    wall1Index = intersections[1].Item2;
+//                    wall2Index = (intersections[0].Item2 + 1) % wallVertices.Count;
+//                    inter1 = intersections[1].Item1;
+//                    inter2 = intersections[0].Item1;
+//                }
+//                //Debug.Log("hole1Index is: " + hole1Index);
+//                //Debug.Log("hole2Index is: " + hole2Index);
+//                //Debug.Log("wall1Index is: " + wall1Index);
+//                //Debug.Log("wall2Index is: " + wall2Index);
+//                int wallIters = 0 > wall2Index - wall1Index ? wallVertices.Count - wall1Index + wall2Index : wall2Index - wall1Index;
+//                List<Vector2> tempVertices = new List<Vector2>();
+//                for (int j = 1; j < wallIters; ++j)
+//                {
+//                    tempVertices.Add(wallVertices[(wall1Index + j) % wallVertices.Count]);
+//                }
+
+//                for (int j = 0; j < tempVertices.Count; ++j)
+//                    wallVertices.Remove(tempVertices[j]);
+//                int intersectIndex = Mathf.Min(wall1Index + 1, wallVertices.Count);
+//                wallVertices.Insert(intersectIndex, inter1);
+//                wallVertices.Insert(intersectIndex + 1, inter2);
+//                int count = 0;
+//                for (int j = (hole1Index + 1) % holeVertices.Count; j != hole2Index; j = (j + 1) % holeVertices.Count)
+//                {
+//                    wallVertices.Insert(intersectIndex + 1 + count, holeVertices[j]);
+//                    ++count;
+//                }
+//            }
+//        }
+//    }
+//}
