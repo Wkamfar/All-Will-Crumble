@@ -74,10 +74,11 @@ public class NetworkManager : MonoBehaviour
 
         ServerTick = TicksBetweenPositionUpdates;
     }
+
+    float lastIterTime = 0;
     private void FixedUpdate()
     {
         Client.Update();
-
         ServerTick++;
     }
     private void OnApplicationQuit()
@@ -115,7 +116,7 @@ public class NetworkManager : MonoBehaviour
     [MessageHandler((ushort)ServerToClientId.sync)]
     private static void Sync(Message message)
     {
-        Singleton.SetTick(message.GetUInt());
+        Singleton.SetTick(message.GetUInt()); 
     }
 
 }

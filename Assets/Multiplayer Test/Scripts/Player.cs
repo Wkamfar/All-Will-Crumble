@@ -41,6 +41,7 @@ public class Player : MonoBehaviour
     private void Move(uint tick, bool didTeleport, Vector3 velocity, Vector3 newPosition, Vector3 eulerAngles)
     {
 
+        //Debug.Log("newPosition is: " + newPosition);
         if (!IsLocal)
         {
             interpolator.NewUpdate(tick, didTeleport, velocity, newPosition);
