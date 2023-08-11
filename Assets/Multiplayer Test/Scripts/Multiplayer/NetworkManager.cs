@@ -75,7 +75,6 @@ public class NetworkManager : MonoBehaviour
         ServerTick = TicksBetweenPositionUpdates;
     }
 
-    float lastIterTime = 0;
     private void FixedUpdate()
     {
         Client.Update();
